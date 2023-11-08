@@ -2,10 +2,14 @@ package br.com.pedrociarlini.xairedirect.business;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiDevice;
 import javax.sound.midi.MidiDevice.Info;
+import javax.swing.SwingUtilities;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
@@ -25,6 +29,27 @@ import br.com.pedrociarlini.xairedirect.model.MidiMessageEntity;
 public class MidiBusiness implements Receiver {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MidiBusiness.class);
+
+	MidiDevice xairMidiDevice = null;
+
+	private final Set<ControlListener> listeners = new HashSet<>();
+
+	public void setXairDevice(MidiDeviceEntity device) {
+		if (device != null) {
+			final MidiDevice.Info info = getDeviceInfo(device);
+			if (info != null) {
+				try {
+					if (xairMidiDevice != null)
+						xairMidiDevice.close();
+
+					xairMidiDevice = MidiSystem.getMidiDevice(info);
+					xairMidiDevice.open();
+				} catch (MidiUnavailableException e) {
+					throw new XairRedirectException("Not possible to get the device: " + e.getLocalizedMessage());
+				}
+			}
+		}
+	}
 
 	public List<MidiDeviceEntity> listMidiDevices() {
 		List<MidiDeviceEntity> result = new ArrayList<>();
@@ -73,7 +98,18 @@ public class MidiBusiness implements Receiver {
 
 	@Override
 	public void send(MidiMessage message, long timeStamp) {
-		System.out.println(convertMessage(message));
+		MidiMessageEntity msg = convertMessage(message);
+		System.out.println(msg);
+		try {
+			xairMidiDevice.getReceiver().send(new ShortMessage(ShortMessage.CONTROL_CHANGE, 0, 0, msg.getControlValue()), timeStamp);
+			listeners.forEach((l) -> {
+				SwingUtilities.invokeLater(() -> {
+					l.controlMessageSent(msg);
+				});
+			});
+		} catch (MidiUnavailableException | InvalidMidiDataException e) {
+			LOGGER.error("ERror duging midi sending: " + e.getLocalizedMessage());
+		}
 	}
 
 	public static MidiMessageEntity convertMessage(MidiMessage message) {
@@ -103,6 +139,10 @@ public class MidiBusiness implements Receiver {
 
 	@Override
 	public void close() {
+	}
+
+	public void addControlListener(ControlListener l) {
+		listeners.add(l);
 	}
 
 }

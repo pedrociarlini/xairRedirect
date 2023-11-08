@@ -39,9 +39,12 @@ public class MainFrame extends JFrame implements ListDataListener, ActionListene
 
 	@Autowired
 	private MidiBusiness midiBuzz;
-	
+
 	@Autowired
 	private MidiDevicesField xairDevicesField;
+
+	@Autowired
+	private ElementsContainer elementsContainer;
 
 	public MainFrame() {
 		setMinimumSize(new Dimension(640, 480));
@@ -55,7 +58,23 @@ public class MainFrame extends JFrame implements ListDataListener, ActionListene
 		setContentPane(contentPane);
 		contentPane.setLayout(new BorderLayout());
 		contentPane.add(createTopContaner(), BorderLayout.NORTH);
+		contentPane.add(elementsContainer, BorderLayout.CENTER);
 
+	}
+
+	private JPanel createTopContaner() {
+		JPanel result = new JPanel();
+		result.setLayout(new FlowLayout(FlowLayout.CENTER));
+		result.add(new JLabel("Input Device"));
+		result.add(midiDevicesField);
+		result.add(new JLabel("     "));
+		midiDevicesField.addActionListener(this);
+
+		result.add(new JLabel("XAIR Device"));
+		result.add(xairDevicesField);
+		xairDevicesField.addActionListener(this);
+
+		return result;
 	}
 
 	private void selectedDeviceChanged() {
@@ -66,20 +85,6 @@ public class MainFrame extends JFrame implements ListDataListener, ActionListene
 			JOptionPane.showMessageDialog(this, e.getLocalizedMessage());
 		}
 
-	}
-
-	private JPanel createTopContaner() {
-		JPanel result = new JPanel();
-		result.setLayout(new FlowLayout(FlowLayout.LEFT));
-		result.add(new JLabel("Input Device"));
-		result.add(midiDevicesField);
-		result.add(new JLabel("     "));
-		midiDevicesField.addActionListener(this);
-
-		result.add(new JLabel("XAIR Device"));
-		result.add(xairDevicesField);
-
-		return result;
 	}
 
 	@Override
@@ -99,6 +104,8 @@ public class MainFrame extends JFrame implements ListDataListener, ActionListene
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource() == midiDevicesField) {
 			selectedDeviceChanged();
+		} else if (e.getSource() == xairDevicesField) {
+			midiBuzz.setXairDevice(xairDevicesField.getSelectedMidiDevice());
 		}
 	}
 }
